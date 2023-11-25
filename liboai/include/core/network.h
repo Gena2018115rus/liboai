@@ -16,6 +16,17 @@
 #include <optional>
 #include <future>
 #include "netimpl.h"
+#include <list>
+
+extern std::atomic_bool gmt_exit_requested;
+extern std::mutex g_commands_mtx;
+extern std::list<std::tuple<std::size_t,
+							std::string,
+							liboai::netimpl::components::Header,
+							liboai::netimpl::components::Body>> g_commands;
+extern std::mutex g_results_mtx;
+extern std::list<std::tuple<std::size_t,
+							std::string>> g_results;
 
 namespace liboai {
 	class Network {			
@@ -120,11 +131,60 @@ namespace liboai {
 				
 				Response res;
 				if constexpr (sizeof...(parameters) > 0) {
-					res = Network::MethodSchema<netimpl::components::Header&&, _Params&&...>::_method[static_cast<uint8_t>(http_method)](
-						netimpl::components::Url { root + endpoint },
-						std::move(_headers),
-						std::forward<_Params>(parameters)...
-					);
+					auto useProxy = [&](auto&& body,
+										auto&&... parameters_) {
+						if constexpr (!std::is_same_v<decltype(body),
+									  netimpl::components::Body&&>) {
+							return false;
+						} else {
+							static std::size_t i;
+							std::size_t id;
+							g_commands_mtx.lock();
+							g_commands.emplace_back(id = i++,
+													root + endpoint,
+													std::move(_headers),
+													std::move(body));
+							g_commands_mtx.unlock();
+
+							std::string str;
+							while (!gmt_exit_requested)
+							{
+								g_results_mtx.lock();
+								for (auto it = g_results.begin();
+									 it != g_results.end(); ++it)
+								{
+									if (std::get<0>(*it) == id)
+									{
+										str = std::get<1>(std::move(*it));
+										g_results.erase(it);
+										g_results_mtx.unlock();
+										goto break2;
+									}
+								}
+								g_results_mtx.unlock();
+								// std::this_thread::yield();
+							}
+							break2:
+
+							res = {
+								"<TODO: url_str>",
+								std::move(str),
+								"<TODO: status_line>",
+								"<TODO: reason>",
+								200,
+								0
+							};
+
+							return true;
+						}
+					};
+
+					if (!useProxy(std::forward<_Params>(parameters)...))
+						res = Network::MethodSchema<netimpl::components::Header&&, _Params&&...>::_method[static_cast<uint8_t>(http_method)](
+							netimpl::components::Url { root + endpoint },
+							std::move(_headers),
+							std::forward<_Params>(parameters)...
+						);
 				}
 				else {
 					res = Network::MethodSchema<netimpl::components::Header&&>::_method[static_cast<uint8_t>(http_method)](

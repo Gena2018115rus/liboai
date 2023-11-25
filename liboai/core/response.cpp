@@ -100,7 +100,7 @@ void liboai::Response::CheckResponse() const noexcept(false) {
 		}
 		else {
 			throw liboai::exception::OpenAIException(
-				!this->reason.empty() ? this->reason : "An unknown error occurred",
+				(!this->reason.empty() ? this->reason : "An unknown error occurred")/* + this->content*/,
 				liboai::exception::EType::E_BADREQUEST,
 				"liboai::Response::CheckResponse()"
 			);
