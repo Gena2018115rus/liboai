@@ -56,9 +56,7 @@ namespace liboai {
 			explicit Conversation(const std::vector<std::string>& user_data);
 
 			Conversation& operator=(const Conversation& other);
-			Conversation& operator=(Conversation&& old) noexcept;
-
-			friend std::ostream& operator<<(std::ostream& os, const Conversation& conv);
+            Conversation& operator=(Conversation&& old) noexcept;
 
 			/*
 				@brief Sets the system data for the conversation.
@@ -159,6 +157,8 @@ namespace liboai {
 		private:
 			nlohmann::json _conversation;
 	};
+
+    std::ostream& operator<<(std::ostream& os, const Conversation& conv);
 
 	class ChatCompletion final : private Network {
 		public:

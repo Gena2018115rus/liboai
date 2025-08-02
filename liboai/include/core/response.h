@@ -85,13 +85,7 @@ namespace liboai {
 			template <class _Ty>
 			nlohmann::json::const_reference operator[](const _Ty& key) const noexcept {
 				return this->raw_json[key];
-			}
-			
-			/*
-				@brief std::ostream operator<< overload to allow for
-					pretty printing of the Response object.
-			*/
-			LIBOAI_EXPORT friend std::ostream& operator<<(std::ostream& os, const Response& r);
+            }
 			
 		public:
 			long status_code = 0; double elapsed = 0.0;
@@ -105,5 +99,12 @@ namespace liboai {
 			*/
 			LIBOAI_EXPORT void CheckResponse() const noexcept(false);
 	};
+
+    /*
+        @brief std::ostream operator<< overload to allow for
+            pretty printing of the Response object.
+    */
+    LIBOAI_EXPORT std::ostream& operator<<(std::ostream& os, const Response& r);
+
 	using FutureResponse = std::future<liboai::Response>;
 }
